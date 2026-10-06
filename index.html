@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHALLENGER • Student Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#17213b;--muted:#7d8798;--line:#e5e9f0;--brand:#586dff;--brand2:#7185ff;--danger:#dc4d4d}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+button,input,textarea,select{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+.auth{min-height:100vh;display:grid;place-items:center;padding:20px}.authbox{width:min(420px,100%);background:#fff;padding:30px;border-radius:18px;box-shadow:0 18px 60px #17213b18}
+.brand{font-size:25px;font-weight:850}.brand b{color:var(--brand)}.muted{color:var(--muted)}
+.input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:9px;margin:7px 0;outline:none}.input:focus{border-color:var(--brand)}
+.btn{border:0;border-radius:9px;padding:11px 15px;font-weight:700}.primary{background:var(--brand);color:#fff}.ghost{background:#eef1ff;color:var(--brand)}.danger{background:#fff0f0;color:var(--danger)}
+.full{width:100%}
+.layout{min-height:100vh}.side{position:fixed;left:0;top:0;bottom:0;width:235px;background:#fff;border-right:1px solid var(--line);padding:24px 15px;z-index:5}
+.navtitle{font-size:10px;letter-spacing:1px;color:#a0a7b4;margin:38px 10px 10px}.nav{width:100%;border:0;background:#fff;text-align:left;padding:12px;border-radius:9px;color:#5e6879;margin:3px 0}.nav.active,.nav:hover{background:#eef1ff;color:var(--brand)}
+.logout{position:absolute;left:15px;right:15px;bottom:20px}.main{margin-left:235px}.top{height:66px;background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;padding:0 28px;position:sticky;top:0;z-index:4}
+.avatar{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:#fff;font-weight:800}.user{display:flex;gap:10px;align-items:center}.content{max-width:1100px;margin:auto;padding:28px}
+.hero{background:var(--ink);color:#fff;padding:38px;border-radius:8px;margin-bottom:14px}.hero h1{font-size:38px;max-width:570px;margin:0;line-height:1.08}.hero h1 span{color:var(--brand2)}.hero p{color:#bbc4d6;max-width:600px;line-height:1.6}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card,.panel{background:#fff;border:1px solid var(--line);border-radius:9px;padding:20px}.card small{color:var(--muted)}.card h2{margin:8px 0 0}
+.page{display:none}.page.active{display:block}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}.pill{font-size:12px;background:#eef1ff;color:var(--brand);padding:5px 8px;border-radius:20px}.file{padding:12px 0}.empty{padding:20px;text-align:center;color:var(--muted)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:14px}
+@media(max-width:760px){.side{width:70px;padding:18px 8px}.side .brand{font-size:0;text-align:center}.side .brand b{font-size:24px}.navtitle,.nav span,.logout span{display:none}.nav{text-align:center;font-size:18px}.main{margin-left:70px}.top{padding:0 12px}.content{padding:14px}.hero{padding:25px}.hero h1{font-size:29px}.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}.hide-mobile{display:none}}
+</style>
+</head>
+<body>
+
+<div id="auth" class="auth">
+  <div class="authbox">
+    <div class="brand"><b>C</b> challenger</div>
+    <p class="muted" id="authSub">Login to continue learning.</p>
+    <input id="email" class="input" type="email" placeholder="Email">
+    <input id="password" class="input" type="password" placeholder="Password">
+    <button id="authBtn" class="btn primary full" onclick="authAction()">Login</button>
+    <p style="text-align:center"><button class="btn ghost" id="modeBtn" onclick="toggleMode()">Create account</button></p>
+    <p id="authMsg" class="muted"></p>
+  </div>
+</div>
+
+<div id="app" class="layout hidden">
+<aside class="side">
+  <div class="brand"><b>C</b> challenger</div>
+  <div class="navtitle">YOUR SPACE</div>
+  <button class="nav active" onclick="page('dashboard',this)">🏠 <span>Overview</span></button>
+  <button class="nav" onclick="page('notes',this)">📚 <span>Notes Library</span></button>
+  <button class="nav" onclick="page('lectures',this)">🎥 <span>Video Lectures</span></button>
+  <button class="nav" onclick="page('tests',this)">📝 <span>Test Arena</span></button>
+  <button class="nav" onclick="page('doubts',this)">💬 <span>Doubt Room</span></button>
+  <button class="nav" onclick="page('announcements',this)">📢 <span>Announcements</span></button>
+  <button class="nav" id="adminNav" onclick="page('admin',this)">⚙️ <span>Admin Studio</span></button>
+  <button class="nav logout" onclick="logout()">🚪 <span>Logout</span></button>
+</aside>
+
+<main class="main">
+<header class="top"><div>Workspace › <b id="title">Overview</b></div><div class="user"><span id="emailLabel" class="hide-mobile"></span><div class="avatar" id="avatar">S</div></div></header>
+<section class="content">
+
+<div id="dashboard" class="page active">
+  <div class="hero"><h1>Keep your momentum, <span>Student.</span></h1><p>Study notes, lectures, tests and doubts in one secure workspace.</p><button class="btn primary" onclick="pageByName('notes')">Continue learning</button></div>
+  <div class="stats">
+    <div class="card">🔥<br><small>Day streak</small><h2 id="statStreak">0 days</h2></div>
+    <div class="card">🎯<br><small>Learning progress</small><h2 id="statProgress">0%</h2></div>
+    <div class="card">✅<br><small>Tests completed</small><h2 id="statTests">0</h2></div>
+    <div class="card">🏆<br><small>Your rank</small><h2 id="statRank">—</h2></div>
+  </div>
+  <h2 style="margin-top:32px">Ready when you are</h2>
+  <div class="grid">
+    <div class="panel"><h3>📚 Your library</h3><p class="muted">Private notes and PDFs uploaded to your account.</p><button class="btn primary" onclick="pageByName('notes')">Open library</button></div>
+    <div class="panel"><h3>📝 Test Arena</h3><p class="muted">Take published tests and save your attempts.</p><button class="btn primary" onclick="pageByName('tests')">Open tests</button></div>
+  </div>
+</div>
+
+<div id="notes" class="page">
+  <h1>📚 Notes Library</h1>
+  <div class="panel"><h3>Upload PDF</h3><input id="noteFile" type="file" accept=".pdf"><br><br><button class="btn primary" onclick="uploadNote()">Upload</button><p id="noteMsg" class="muted"></p></div>
+  <div class="panel" style="margin-top:14px"><h3>Your notes</h3><div id="notesList">Loading...</div></div>
+</div>
+
+<div id="lectures" class="page">
+  <h1>🎥 Video Lectures</h1><div class="panel"><div id="lectureList">Loading...</div></div>
+</div>
+
+<div id="tests" class="page">
+  <h1>📝 Test Arena</h1><div id="testList" class="grid">Loading...</div><div id="testArea" style="margin-top:15px"></div>
+</div>
+
+<div id="doubts" class="page">
+  <h1>💬 Doubt Room</h1>
+  <div class="panel"><textarea id="doubtText" class="input" rows="6" placeholder="Type your doubt..."></textarea><button class="btn primary" onclick="sendDoubt()">Send Doubt</button><p id="doubtMsg" class="muted"></p></div>
+  <div class="panel" style="margin-top:14px"><h3>Your doubts</h3><div id="doubtList">Loading...</div></div>
+</div>
+
+<div id="announcements" class="page">
+  <h1>📢 Announcements</h1><div class="panel"><div id="announcementList">Loading...</div></div>
+</div>
+
+<div id="admin" class="page">
+  <h1>⚙️ Admin Studio</h1>
+  <div id="adminContent"></div>
+</div>
+
+</section>
+</main>
+</div>
+
+<script>
+const SUPABASE_URL="https://pxuepvjteufafyarshwb.supabase.co";
+const SUPABASE_KEY="sb_publishable_-u2Um7zArwL48S99wi4puw_CjBWPPbh";
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let signup=false,currentUser=null,currentProfile=null;
+
+const $=id=>document.getElementById(id);
+function msg(id,text){$(id).textContent=text||""}
+
+function toggleMode(){
+  signup=!signup;
+  $("authBtn").textContent=signup?"Create account":"Login";
+  $("modeBtn").textContent=signup?"Back to login":"Create account";
+  $("authSub").textContent=signup?"Create your Challenger account.":"Login to continue learning.";
+}
+async function authAction(){
+  const email=$("email").value.trim(),password=$("password").value;
+  if(!email||password.length<6){msg("authMsg","Enter a valid email and a password of at least 6 characters.");return}
+  msg("authMsg","Please wait...");
+  const r=signup?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+  if(r.error){msg("authMsg",r.error.message);return}
+  if(signup&&!r.data.session){msg("authMsg","Account created. Check your email if confirmation is enabled.");return}
+  await boot();
+}
+async function logout(){await sb.auth.signOut();location.reload()}
+
+async function boot(){
+  const {data:{user}}=await sb.auth.getUser();
+  if(!user){$("auth").classList.remove("hidden");$("app").classList.add("hidden");return}
+  currentUser=user;
+  $("auth").classList.add("hidden");$("app").classList.remove("hidden");
+  $("emailLabel").textContent=user.email||"";
+  $("avatar").textContent=(user.email||"S")[0].toUpperCase();
+  const p=await sb.from("profiles").select("*").eq("id",user.id).maybeSingle();
+  currentProfile=p.data;
+  $("adminNav").style.display=currentProfile?.role==="admin"?"block":"none";
+  await Promise.all([loadDashboard(),loadNotes(),loadLectures(),loadTests(),loadDoubts(),loadAnnouncements()]);
+}
+function page(name,btn){
+  document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+  $(name).classList.add("active");
+  document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));
+  if(btn)btn.classList.add("active");
+  const t={dashboard:"Overview",notes:"Notes Library",lectures:"Video Lectures",tests:"Test Arena",doubts:"Doubt Room",announcements:"Announcements",admin:"Admin Studio"};
+  $("title").textContent=t[name]||name;
+}
+function pageByName(name){page(name)}
+
+async function loadDashboard(){
+  const {data}=await sb.from("test_attempts").select("id").eq("user_id",currentUser.id);
+  $("statTests").textContent=data?.length||0;
+  $("statRank").textContent=data?.length?"Active":"—";
+}
+async function uploadNote(){
+  const file=$("noteFile").files[0]; if(!file){msg("noteMsg","Choose a PDF first.");return}
+  if(file.type!=="application/pdf"){msg("noteMsg","Only PDF files are allowed.");return}
+  msg("noteMsg","Uploading...");
+  const path=`${currentUser.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,"_")}`;
+  const up=await sb.storage.from("notes").upload(path,file,{contentType:"application/pdf"});
+  if(up.error){msg("noteMsg",up.error.message);return}
+  const ins=await sb.from("notes").insert({user_id:currentUser.id,title:file.name,file_path:path});
+  if(ins.error){await sb.storage.from("notes").remove([path]);msg("noteMsg",ins.error.message);return}
+  $("noteFile").value="";msg("noteMsg","Uploaded successfully.");loadNotes();
+}
+async function loadNotes(){
+  if(!currentUser)return;
+  const r=await sb.from("notes").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false});
+  if(r.error){$("notesList").innerHTML=`<div class="empty">${r.error.message}</div>`;return}
+  if(!r.data.length){$("notesList").innerHTML='<div class="empty">No notes uploaded yet.</div>';return}
+  $("notesList").innerHTML=r.data.map(n=>`<div class="row"><span>📄 ${esc(n.title)}</span><button class="btn ghost" onclick="openNote('${encodeURIComponent(n.file_path)}')">Open</button></div>`).join("");
+}
+async function openNote(encoded){
+  const path=decodeURIComponent(encoded);
+  const r=await sb.storage.from("notes").createSignedUrl(path,3600);
+  if(r.error){alert(r.error.message);return} window.open(r.data.signedUrl,"_blank");
+}
+async function loadLectures(){
+  const r=await sb.from("lectures").select("*").eq("published",true).order("created_at",{ascending:false});
+  $("lectureList").innerHTML=r.error?`<div class="empty">${r.error.message}</div>`:r.data?.length?r.data.map(x=>`<div class="row"><div><b>${esc(x.title)}</b><br><small class="muted">${esc(x.description||"")}</small></div><a class="btn primary" href="${safeUrl(x.video_url)}" target="_blank">Watch</a></div>`).join(""):'<div class="empty">No lectures published yet.</div>';
+}
+async function loadTests(){
+  const r=await sb.from("tests").select("*").eq("published",true).order("created_at",{ascending:false});
+  $("testList").innerHTML=r.error?`<div class="panel">${r.error.message}</div>`:r.data?.length?r.data.map(x=>`<div class="panel"><h3>${esc(x.title)}</h3><p class="muted">${esc(x.description||"")}</p><button class="btn primary" onclick="startTest('${x.id}')">Start test</button></div>`).join(""):'<div class="panel">No tests published yet.</div>';
+}
+async function startTest(testId){
+  const r=await sb.from("questions").select("*").eq("test_id",testId).order("position");
+  if(r.error){alert(r.error.message);return}
+  if(!r.data.length){alert("This test has no questions yet.");return}
+  $("testArea").innerHTML=`<div class="panel"><h2>Test</h2>${r.data.map((q,i)=>`<div style="margin:20px 0"><b>${i+1}. ${esc(q.question)}</b><div>${["a","b","c","d"].map(k=>q["option_"+k]?`<label style="display:block;margin:8px"><input type="radio" name="q${q.id}" value="${k}"> ${esc(q["option_"+k])}</label>`:"").join("")}</div></div>`).join("")}<button class="btn primary" onclick="submitTest('${testId}')">Submit</button></div>`;
+  window.currentQuestions=r.data;
+}
+async function submitTest(testId){
+  let score=0;
+  for(const q of window.currentQuestions){const v=document.querySelector(`input[name="q${q.id}"]:checked`)?.value;if(v===q.correct_option)score++}
+  const r=await sb.from("test_attempts").insert({user_id:currentUser.id,test_id:testId,score,max_score:window.currentQuestions.length});
+  if(r.error){alert(r.error.message);return}
+  $("testArea").innerHTML=`<div class="panel"><h2>Result: ${score}/${window.currentQuestions.length}</h2><button class="btn primary" onclick="loadTests()">Back to tests</button></div>`;
+  loadDashboard();
+}
+async function sendDoubt(){
+  const q=$("doubtText").value.trim();if(!q){msg("doubtMsg","Write your doubt first.");return}
+  const r=await sb.from("doubts").insert({user_id:currentUser.id,question:q});
+  if(r.error){msg("doubtMsg",r.error.message);return}
+  $("doubtText").value="";msg("doubtMsg","Doubt submitted.");loadDoubts();
+}
+async function loadDoubts(){
+  const r=await sb.from("doubts").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false});
+  $("doubtList").innerHTML=r.error?`<div class="empty">${r.error.message}</div>`:r.data?.length?r.data.map(d=>`<div class="row"><div><b>${esc(d.question)}</b><br><small class="muted">Status: ${esc(d.status||"pending")}${d.answer?" • Answer: "+esc(d.answer):""}</small></div></div>`).join(""):'<div class="empty">No doubts yet.</div>';
+}
+async function loadAnnouncements(){
+  const r=await sb.from("announcements").select("*").eq("published",true).order("created_at",{ascending:false});
+  $("announcementList").innerHTML=r.error?`<div class="empty">${r.error.message}</div>`:r.data?.length?r.data.map(a=>`<div class="row"><div><b>${esc(a.title)}</b><br><small class="muted">${esc(a.body)}</small></div></div>`).join(""):'<div class="empty">No announcements.</div>';
+}
+function adminUI(){
+  if(currentProfile?.role!=="admin"){$("adminContent").innerHTML='<div class="panel">Admin access denied.</div>';return}
+  $("adminContent").innerHTML=`
+  <div class="grid">
+   <div class="panel"><h3>Publish announcement</h3><input id="aTitle" class="input" placeholder="Title"><textarea id="aBody" class="input" rows="4" placeholder="Announcement"></textarea><button class="btn primary" onclick="addAnnouncement()">Publish</button></div>
+   <div class="panel"><h3>Add lecture</h3><input id="lTitle" class="input" placeholder="Lecture title"><input id="lUrl" class="input" placeholder="YouTube/lecture URL"><textarea id="lDesc" class="input" rows="3" placeholder="Description"></textarea><button class="btn primary" onclick="addLecture()">Publish</button></div>
+   <div class="panel"><h3>Create test</h3><input id="tTitle" class="input" placeholder="Test title"><input id="tDesc" class="input" placeholder="Description"><button class="btn primary" onclick="addTest()">Create</button></div>
+  </div>
+  <div class="panel" style="margin-top:14px"><p class="muted">Questions are added from the Supabase Table Editor or by extending this admin form.</p></div>`;
+}
+async function addAnnouncement(){
+  const r=await sb.from("announcements").insert({title:$("aTitle").value,body:$("aBody").value,published:true});
+  if(r.error)alert(r.error.message);else{alert("Published");loadAnnouncements()}
+}
+async function addLecture(){
+  const r=await sb.from("lectures").insert({title:$("lTitle").value,video_url:$("lUrl").value,description:$("lDesc").value,published:true});
+  if(r.error)alert(r.error.message);else{alert("Published");loadLectures()}
+}
+async function addTest(){
+  const r=await sb.from("tests").insert({title:$("tTitle").value,description:$("tDesc").value,published:true});
+  if(r.error)alert(r.error.message);else{alert("Test created")}
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function safeUrl(u){try{const x=new URL(u);return ["http:","https:"].includes(x.protocol)?x.href:"#"}catch{return"#"}}
+document.querySelector('[onclick="page(\'admin\',this)"]').addEventListener("click",adminUI);
+sb.auth.onAuthStateChange((event,session)=>{if(session)setTimeout(boot,0)});
+boot();
+</script>
+</body>
+</html>

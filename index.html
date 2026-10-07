@@ -9,7 +9,6 @@
 :root{--bg:#f5f7fb;--card:#fff;--ink:#17213b;--muted:#7d8798;--line:#e5e9f0;--brand:#586dff;--brand2:#7185ff;--danger:#dc4d4d}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 button,input,textarea,select{font:inherit}button{cursor:pointer}.hidden{display:none!important}
-.auth{min-height:100vh;display:grid;place-items:center;padding:20px}.authbox{width:min(420px,100%);background:#fff;padding:30px;border-radius:18px;box-shadow:0 18px 60px #17213b18}
 .brand{font-size:25px;font-weight:850}.brand b{color:var(--brand)}.muted{color:var(--muted)}
 .input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:9px;margin:7px 0;outline:none}.input:focus{border-color:var(--brand)}
 .btn{border:0;border-radius:9px;padding:11px 15px;font-weight:700}.primary{background:var(--brand);color:#fff}.ghost{background:#eef1ff;color:var(--brand)}.danger{background:#fff0f0;color:var(--danger)}
@@ -26,19 +25,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;bor
 </head>
 <body>
 
-<div id="auth" class="auth">
-  <div class="authbox">
-    <div class="brand"><b>C</b> challenger</div>
-    <p class="muted" id="authSub">Login to continue learning.</p>
-    <input id="email" class="input" type="email" placeholder="Email">
-    <input id="password" class="input" type="password" placeholder="Password">
-    <button id="authBtn" class="btn primary full" onclick="authAction()">Login</button>
-    <p style="text-align:center"><button class="btn ghost" id="modeBtn" onclick="toggleMode()">Create account</button></p>
-    <p id="authMsg" class="muted"></p>
-  </div>
-</div>
-
-<div id="app" class="layout hidden">
+<div id="app" class="layout">
 <aside class="side">
   <div class="brand"><b>C</b> challenger</div>
   <div class="navtitle">YOUR SPACE</div>
@@ -49,11 +36,10 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;bor
   <button class="nav" onclick="page('doubts',this)">💬 <span>Doubt Room</span></button>
   <button class="nav" onclick="page('announcements',this)">📢 <span>Announcements</span></button>
   <button class="nav" id="adminNav" onclick="page('admin',this)">⚙️ <span>Admin Studio</span></button>
-  <button class="nav logout" onclick="logout()">🚪 <span>Logout</span></button>
 </aside>
 
 <main class="main">
-<header class="top"><div>Workspace › <b id="title">Overview</b></div><div class="user"><span id="emailLabel" class="hide-mobile"></span><div class="avatar" id="avatar">S</div></div></header>
+<header class="top"><div>Workspace › <b id="title">Overview</b></div><div class="user"><div class="avatar" id="avatar">S</div></div></header>
 <section class="content">
 
 <div id="dashboard" class="page active">
@@ -109,40 +95,29 @@ const SUPABASE_URL="https://pxuepvjteufafyarshwb.supabase.co";
 const SUPABASE_KEY="sb_publishable_-u2Um7zArwL48S99wi4puw_CjBWPPbh";
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-let signup=false,currentUser=null,currentProfile=null;
-
-const $=id=>document.getElementById(id);
-function msg(id,text){$(id).textContent=text||""}
-
-function toggleMode(){
-  signup=!signup;
-  $("authBtn").textContent=signup?"Create account":"Login";
-  $("modeBtn").textContent=signup?"Back to login":"Create account";
-  $("authSub").textContent=signup?"Create your Challenger account.":"Login to continue learning.";
-}
-async function authAction(){
-  const email=$("email").value.trim(),password=$("password").value;
-  if(!email||password.length<6){msg("authMsg","Enter a valid email and a password of at least 6 characters.");return}
-  msg("authMsg","Please wait...");
-  const r=signup?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
-  if(r.error){msg("authMsg",r.error.message);return}
-  if(signup&&!r.data.session){msg("authMsg","Account created. Check your email if confirmation is enabled.");return}
-  await boot();
-}
-async function logout(){await sb.auth.signOut();location.reload()}
+let currentUser=null,currentProfile=null;
 
 async function boot(){
-  const {data:{user}}=await sb.auth.getUser();
-  if(!user){$("auth").classList.remove("hidden");$("app").classList.add("hidden");return}
+  const {data:{session}}=await sb.auth.getSession();
+  let user=session?.user;
+  if(!user){
+    const r=await sb.auth.signInAnonymously();
+    if(r.error){
+      console.error("Anonymous sign-in failed:",r.error);
+      alert("Unable to start the workspace. Please enable Anonymous Sign-ins in Supabase Authentication.");
+      return;
+    }
+    user=r.data.user;
+  }
   currentUser=user;
-  $("auth").classList.add("hidden");$("app").classList.remove("hidden");
-  $("emailLabel").textContent=user.email||"";
-  $("avatar").textContent=(user.email||"S")[0].toUpperCase();
+  $("app").classList.remove("hidden");
+  $("avatar").textContent="S";
   const p=await sb.from("profiles").select("*").eq("id",user.id).maybeSingle();
   currentProfile=p.data;
   $("adminNav").style.display=currentProfile?.role==="admin"?"block":"none";
   await Promise.all([loadDashboard(),loadNotes(),loadLectures(),loadTests(),loadDoubts(),loadAnnouncements()]);
 }
+
 function page(name,btn){
   document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
   $(name).classList.add("active");
@@ -243,7 +218,6 @@ async function addTest(){
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function safeUrl(u){try{const x=new URL(u);return ["http:","https:"].includes(x.protocol)?x.href:"#"}catch{return"#"}}
 document.querySelector('[onclick="page(\'admin\',this)"]').addEventListener("click",adminUI);
-sb.auth.onAuthStateChange((event,session)=>{if(session)setTimeout(boot,0)});
 boot();
 </script>
 </body>
